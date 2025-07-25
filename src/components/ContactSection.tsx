@@ -21,17 +21,39 @@ const ContactSection: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate form data
+    if (!formData.name.trim() || !formData.email.trim() || !formData.subject.trim() || !formData.message.trim()) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in all required fields.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsSubmitting(true);
     setShowFlyingAnimation(true);
     
     try {
-      // Send email via Supabase edge function
+      // Call the edge function with proper error handling
       const { data, error } = await supabase.functions.invoke('send-contact-email', {
-        body: formData
+        body: {
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          subject: formData.subject.trim(),
+          message: formData.message.trim()
+        }
       });
 
       if (error) {
+        console.error('Supabase function error:', error);
         throw error;
+      }
+
+      if (data?.error) {
+        console.error('Function returned error:', data.error);
+        throw new Error(data.error);
       }
 
       setShowFlyingAnimation(false);
@@ -39,18 +61,19 @@ const ContactSection: React.FC = () => {
       // Show success toast
       toast({
         title: "Message sent successfully!",
-        description: "Thank you for reaching out. I'll get back to you soon.",
+        description: "Thank you for reaching out. I'll get back to you within 24 hours.",
       });
       
       // Reset form
       setFormData({ name: '', email: '', subject: '', message: '' });
+      
     } catch (error) {
       console.error('Error sending email:', error);
       setShowFlyingAnimation(false);
       
       toast({
         title: "Failed to send message",
-        description: "Please try again or contact me directly at duttasayan835@gmail.com",
+        description: `Something went wrong. Please try again or contact me directly at duttasayan835@gmail.com. Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive"
       });
     } finally {
@@ -177,6 +200,7 @@ const ContactSection: React.FC = () => {
                         value={formData.name}
                         onChange={handleChange}
                         required
+                        maxLength={100}
                         className="glass-effect border-primary/20 focus:border-primary/40"
                         placeholder="Your full name"
                       />
@@ -192,6 +216,7 @@ const ContactSection: React.FC = () => {
                         value={formData.email}
                         onChange={handleChange}
                         required
+                        maxLength={255}
                         className="glass-effect border-primary/20 focus:border-primary/40"
                         placeholder="your.email@example.com"
                       />
@@ -208,6 +233,7 @@ const ContactSection: React.FC = () => {
                       value={formData.subject}
                       onChange={handleChange}
                       required
+                      maxLength={200}
                       className="glass-effect border-primary/20 focus:border-primary/40"
                       placeholder="What's this about?"
                     />
@@ -224,6 +250,7 @@ const ContactSection: React.FC = () => {
                       onChange={handleChange}
                       required
                       rows={6}
+                      maxLength={2000}
                       className="glass-effect border-primary/20 focus:border-primary/40 resize-none"
                       placeholder="Tell me about your project, idea, or just say hello!"
                     />
@@ -315,6 +342,13 @@ const ContactSection: React.FC = () => {
                 <li>• Open source contributions</li>
                 <li>• Technical consulting</li>
               </ul>
+              
+              <div className="mt-4 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                <p className="text-xs text-muted-foreground">
+                  <strong>Response Time:</strong> I typically respond within 24 hours. 
+                  For urgent matters, feel free to reach out directly via email.
+                </p>
+              </div>
             </motion.div>
           </motion.div>
         </div>
